@@ -6,8 +6,11 @@ def main(hours: int = 200):
     
     print(f"\n=== Scraping Results (last {hours} hours) ===")
     print(f"YouTube videos: {len(results['youtube'])}")
+    print(f"Saved YouTube videos: {results['saved']['youtube']}")
     print(f"OpenAI articles: {len(results['openai'])}")
+    print(f"Saved OpenAI articles: {results['saved']['openai']}")
     print(f"Anthropic articles: {len(results['anthropic'])}")
+    print(f"Saved Anthropic articles: {results['saved']['anthropic']}")
     
     return results
 
