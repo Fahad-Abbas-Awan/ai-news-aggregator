@@ -44,7 +44,8 @@ def run_scrapers(hours: int = 200) -> dict[str, Any]:
 
         # Scrape Anthropic and save
         anthropic_scraper = AnthropicScraper()
-        anthropic_articles = anthropic_scraper.get_articles(hours=hours)
+        # Request markdown conversion for Anthropic articles so we store normalized content
+        anthropic_articles = anthropic_scraper.get_articles(hours=hours, fetch_markdown=True)
         results["anthropic"].extend(anthropic_articles)
         results["saved"]["anthropic"] = repository.save_anthropic_articles(anthropic_articles)
     finally:
