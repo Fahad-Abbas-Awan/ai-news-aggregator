@@ -1,0 +1,25 @@
+USER_PROFILE = {
+    "name": "Fahad",
+    "title": "AI Engineer",
+    "background": "AI engineer who cares about practical AI systems, model evaluation, orchestration, and production deployment.",
+    "interests": [
+        "Large Language Models (LLMs) and reasoning models",
+        "RAG systems and retrieval quality",
+        "AI agents, orchestration, and workflows",
+        "MLOps, deployment, and observability",
+        "Multimodal AI and video intelligence",
+        "Prompt engineering and structured outputs",
+        "Model evaluation, benchmarks, and reliability",
+        "AI infrastructure, scaling, and cost control",
+        "Research breakthroughs with real-world impact",
+        "Hands-on implementation guides and tutorials",
+    ],
+    "preferences": {
+        "prefer_practical": True,
+        "prefer_technical_depth": True,
+        "prefer_research_breakthroughs": True,
+        "prefer_production_focus": True,
+        "avoid_marketing_hype": True,
+    },
+    "expertise_level": "Advanced",
+}

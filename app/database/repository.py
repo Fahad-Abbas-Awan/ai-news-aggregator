@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Sequence
 
 from sqlalchemy.orm import Session
@@ -253,6 +253,28 @@ class NewsRepository:
         self.session.add(digest)
         self.session.commit()
         return digest
+
+    def get_recent_digests(self, hours: int = 24) -> list[dict[str, Any]]:
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+        digests = (
+            self.session.query(Digest)
+            .filter(Digest.created_at >= cutoff_time)
+            .order_by(Digest.created_at.desc())
+            .all()
+        )
+
+        return [
+            {
+                "id": digest.id,
+                "article_type": digest.article_type,
+                "article_id": digest.article_id,
+                "url": digest.url,
+                "title": digest.title,
+                "summary": digest.summary,
+                "created_at": digest.created_at,
+            }
+            for digest in digests
+        ]
 
     def close(self) -> None:
         self.session.close()
