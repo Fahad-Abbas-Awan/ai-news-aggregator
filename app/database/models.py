@@ -42,3 +42,15 @@ class AnthropicArticle(Base):
     category: Mapped[str | None] = mapped_column(String, nullable=True)
     markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Digest(Base):
+    __tablename__ = "digests"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    article_type: Mapped[str] = mapped_column(String, nullable=False)
+    article_id: Mapped[str] = mapped_column(String, nullable=False)
+    url: Mapped[str] = mapped_column(String, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
