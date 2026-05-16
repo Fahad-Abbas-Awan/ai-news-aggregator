@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime
 
+from app.database.connection import engine
+from app.database.models import Base
 from app.runner import run_scrapers
 from app.services.process_anthropic import process_anthropic_markdown
 from app.services.process_youtube import process_youtube_transcripts
@@ -33,6 +35,15 @@ def run_daily_pipeline(hours: int = 24) -> dict:
     }
 
     try:
+        logger.info("\n[0/6] Ensuring database tables exist...")
+        try:
+            with engine.connect():
+                Base.metadata.create_all(engine)
+                logger.info("✓ Database tables verified/created")
+        except Exception as exc:
+            logger.error("Failed to create database tables: %s", exc)
+            raise
+
         logger.info("\n[1/6] Scraping articles from sources...")
         scraping_results = run_scrapers(hours=hours)
         results["scraping"] = {
