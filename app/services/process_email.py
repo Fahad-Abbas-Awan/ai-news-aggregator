@@ -36,8 +36,14 @@ def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestRespon
     total = len(digests)
 
     if total == 0:
-        logger.warning(f"No digests found from the last {hours} hours")
-        raise ValueError("No digests available")
+        logger.warning("No digests found from the last %s hours", hours)
+        intro = email_agent.generate_introduction([])
+        return EmailDigestResponse(
+            introduction=intro,
+            articles=[],
+            total_ranked=0,
+            top_n=top_n,
+        )
 
     logger.info(f"Ranking {total} digests for email generation")
     ranked_articles = curator.rank_digests(digests)
@@ -83,6 +89,16 @@ def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
     """Generate and send email digest"""
     try:
         result = generate_email_digest(hours=hours, top_n=top_n)
+
+        if not result.articles:
+            logger.warning("No digests available; skipping email send")
+            return {
+                "success": True,
+                "skipped": True,
+                "reason": f"No digests found in last {hours} hours",
+                "articles_count": 0,
+            }
+
         markdown_content = result.to_markdown()
         html_content = digest_to_html(result)
 
@@ -96,13 +112,11 @@ def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
         logger.info("✅ Email sent successfully!")
         return {
             "success": True,
+            "skipped": False,
             "subject": subject,
             "articles_count": len(result.articles),
             "message": f"Email sent with {len(result.articles)} top articles",
         }
-    except ValueError as e:
-        logger.error(f"Error sending email: {e}")
-        return {"success": False, "error": str(e)}
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         return {"success": False, "error": str(e)}

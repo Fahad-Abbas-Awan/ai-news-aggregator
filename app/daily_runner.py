@@ -92,16 +92,22 @@ def run_daily_pipeline(hours: int = 24) -> dict:
         if curation_result.get("ranked", 0) > 0:
             logger.info("✓ Ranked %s digests", curation_result["ranked"])
         else:
-            logger.error("✗ Failed to rank digests")
+            logger.warning("No digests ranked (likely none available in window)")
 
         logger.info("\n[6/6] Sending email digest...")
         email_result = send_digest_email(hours=hours, top_n=10)
         results["email"] = email_result
-        if email_result.get("success"):
+        if email_result.get("success") and email_result.get("skipped"):
+            logger.info("✓ No email sent (no digests available)")
+            results["success"] = True
+        elif email_result.get("success"):
             logger.info("✓ Email sent successfully!")
             results["success"] = True
         else:
-            logger.error("✗ Failed to send email: %s", email_result.get("error", "Unknown error"))
+            logger.error(
+                "✗ Failed to send email: %s",
+                email_result.get("error", "Unknown error"),
+            )
 
     except Exception as exc:
         logger.error("Pipeline failed with error: %s", exc, exc_info=True)
