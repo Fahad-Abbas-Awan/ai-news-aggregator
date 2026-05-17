@@ -16,7 +16,7 @@ services:
         fromDatabase:
           name: ai-news-aggregator-db
           property: connectionString
-      - key: OPENAI_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
       - key: MY_EMAIL
         sync: false
