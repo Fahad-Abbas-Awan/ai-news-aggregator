@@ -2,7 +2,9 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 import feedparser
-from docling.document_converter import DocumentConverter
+import requests
+from bs4 import BeautifulSoup
+from markdownify import markdownify as html_to_markdown
 from pydantic import BaseModel
 
 
@@ -26,7 +28,6 @@ class AnthropicArticle(BaseModel):
 class AnthropicScraper:
     def __init__(self):
         self.rss_urls = RSS_URLS
-        self.converter = DocumentConverter()
 
     def get_articles(self, hours: int = 200, fetch_markdown: bool = False) -> List[AnthropicArticle]:
         """Fetch and return recent articles from all Anthropic RSS feeds.
@@ -79,12 +80,34 @@ class AnthropicScraper:
         return articles
 
     def url_to_markdown(self, url: str) -> Optional[str]:
-        """Use Docling's DocumentConverter to convert a URL to markdown. Returns None on failure."""
+        """Fetch a URL and convert its main HTML to markdown.
+
+        Uses lightweight HTML parsing/conversion to keep memory usage low.
+        """
         if not url:
             return None
         try:
-            result = self.converter.convert(url)
-            return result.document.export_to_markdown()
+            resp = requests.get(
+                url,
+                timeout=20,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (compatible; ai-news-aggregator/1.0; +https://render.com)"
+                },
+            )
+            resp.raise_for_status()
+
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for tag in soup(["script", "style", "noscript"]):
+                tag.decompose()
+
+            container = soup.find("main") or soup.find("article") or soup.body or soup
+            markdown = html_to_markdown(str(container), heading_style="ATX")
+            markdown = (markdown or "").strip()
+            if not markdown:
+                return None
+
+            # Keep payloads bounded to avoid very large rows / memory spikes downstream.
+            return markdown[:50_000]
         except Exception:
             return None
 
