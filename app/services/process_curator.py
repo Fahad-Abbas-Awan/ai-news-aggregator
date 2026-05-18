@@ -12,11 +12,11 @@ def curate_digests(hours: int = 24) -> dict:
     curator = CuratorAgent(USER_PROFILE)
     repo = NewsRepository()
 
-    digests = repo.get_recent_digests(hours=hours)
+    digests = repo.get_recent_digests(hours=hours, unsent_only=True)
     total = len(digests)
 
     if total == 0:
-        logger.warning("No digests found from the last %s hours", hours)
+        logger.warning("No unsent digests found from the last %s hours", hours)
         return {"total": 0, "ranked": 0, "articles": []}
 
     logger.info("Curating %s digests from the last %s hours", total, hours)

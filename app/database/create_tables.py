@@ -22,6 +22,11 @@ def create_tables() -> None:
                     "ALTER TABLE IF EXISTS anthropic_articles ADD COLUMN IF NOT EXISTS markdown TEXT"
                 )
             )
+            conn.execute(
+                text(
+                    "ALTER TABLE IF EXISTS digests ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP"
+                )
+            )
             conn.commit()
     except Exception:
         # Best-effort: do not raise for existing deployments, user can run migrations manually.

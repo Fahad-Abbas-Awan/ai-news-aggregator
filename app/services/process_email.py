@@ -31,58 +31,60 @@ def generate_email_digest(hours: int = 24, top_n: int = 10) -> EmailDigestRespon
     curator = CuratorAgent(USER_PROFILE)
     email_agent = EmailAgent(USER_PROFILE)
     repo = NewsRepository()
+    try:
+        digests = repo.get_recent_digests(hours=hours, unsent_only=True)
+        total = len(digests)
 
-    digests = repo.get_recent_digests(hours=hours)
-    total = len(digests)
-
-    if total == 0:
-        logger.warning("No digests found from the last %s hours", hours)
-        intro = email_agent.generate_introduction([])
-        return EmailDigestResponse(
-            introduction=intro,
-            articles=[],
-            total_ranked=0,
-            top_n=top_n,
-        )
-
-    logger.info(f"Ranking {total} digests for email generation")
-    ranked_articles = curator.rank_digests(digests)
-
-    if not ranked_articles:
-        logger.error("Failed to rank digests")
-        raise ValueError("Failed to rank articles")
-
-    logger.info(f"Generating email digest with top {top_n} articles")
-
-    # Build article details from ranked articles and digests
-    article_details = []
-    for a in ranked_articles:
-        digest = next((d for d in digests if d["id"] == a.digest_id), None)
-        if digest:
-            article_details.append(
-                RankedArticleDetail(
-                    digest_id=a.digest_id,
-                    rank=a.rank,
-                    relevance_score=a.relevance_score,
-                    reasoning=a.reasoning,
-                    title=digest.get("title", ""),
-                    summary=digest.get("summary", ""),
-                    url=digest.get("url", ""),
-                    article_type=digest.get("article_type", ""),
-                )
+        if total == 0:
+            logger.warning("No unsent digests found from the last %s hours", hours)
+            intro = email_agent.generate_introduction([])
+            return EmailDigestResponse(
+                introduction=intro,
+                articles=[],
+                total_ranked=0,
+                top_n=top_n,
             )
 
-    email_digest = email_agent.create_email_digest_response(
-        ranked_articles=article_details, total_ranked=len(ranked_articles), limit=top_n
-    )
+        logger.info("Ranking %s unsent digests for email generation", total)
+        ranked_articles = curator.rank_digests(digests)
 
-    logger.info("Email digest generated successfully")
-    logger.info(f"\n=== Email Introduction ===")
-    logger.info(email_digest.introduction.greeting)
-    logger.info(f"\n{email_digest.introduction.introduction}")
-    logger.info(f"\nTop {top_n} articles prepared for sending")
+        if not ranked_articles:
+            logger.error("Failed to rank digests")
+            raise ValueError("Failed to rank articles")
 
-    return email_digest
+        logger.info("Generating email digest with top %s articles", top_n)
+
+        # Build article details from ranked articles and digests
+        article_details = []
+        for a in ranked_articles:
+            digest = next((d for d in digests if d["id"] == a.digest_id), None)
+            if digest:
+                article_details.append(
+                    RankedArticleDetail(
+                        digest_id=a.digest_id,
+                        rank=a.rank,
+                        relevance_score=a.relevance_score,
+                        reasoning=a.reasoning,
+                        title=digest.get("title", ""),
+                        summary=digest.get("summary", ""),
+                        url=digest.get("url", ""),
+                        article_type=digest.get("article_type", ""),
+                    )
+                )
+
+        email_digest = email_agent.create_email_digest_response(
+            ranked_articles=article_details, total_ranked=len(ranked_articles), limit=top_n
+        )
+
+        logger.info("Email digest generated successfully")
+        logger.info("\n=== Email Introduction ===")
+        logger.info(email_digest.introduction.greeting)
+        logger.info("\n%s", email_digest.introduction.introduction)
+        logger.info("\nTop %s articles prepared for sending", top_n)
+
+        return email_digest
+    finally:
+        repo.close()
 
 
 def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
@@ -108,6 +110,15 @@ def send_digest_email(hours: int = 24, top_n: int = 10) -> dict:
 
         logger.info(f"\nSending email to {USER_PROFILE['name']}...")
         send_email(subject=subject, body_text=markdown_content, body_html=html_content)
+
+        # Mark digests as sent only after successful delivery
+        repo = NewsRepository()
+        try:
+            digest_ids = [a.digest_id for a in result.articles]
+            updated = repo.mark_digests_sent(digest_ids)
+            logger.info("Marked %s digests as sent", updated)
+        finally:
+            repo.close()
 
         logger.info("✅ Email sent successfully!")
         return {

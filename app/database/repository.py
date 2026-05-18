@@ -254,14 +254,12 @@ class NewsRepository:
         self.session.commit()
         return digest
 
-    def get_recent_digests(self, hours: int = 24) -> list[dict[str, Any]]:
+    def get_recent_digests(self, hours: int = 24, unsent_only: bool = False) -> list[dict[str, Any]]:
         cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
-        digests = (
-            self.session.query(Digest)
-            .filter(Digest.created_at >= cutoff_time)
-            .order_by(Digest.created_at.desc())
-            .all()
-        )
+        query = self.session.query(Digest).filter(Digest.created_at >= cutoff_time)
+        if unsent_only:
+            query = query.filter(Digest.sent_at.is_(None))
+        digests = query.order_by(Digest.created_at.desc()).all()
 
         return [
             {
@@ -272,9 +270,26 @@ class NewsRepository:
                 "title": digest.title,
                 "summary": digest.summary,
                 "created_at": digest.created_at,
+                "sent_at": getattr(digest, "sent_at", None),
             }
             for digest in digests
         ]
+
+    def mark_digests_sent(self, digest_ids: Sequence[str], sent_at: datetime | None = None) -> int:
+        if not digest_ids:
+            return 0
+
+        if sent_at is None:
+            sent_at = datetime.utcnow()
+
+        updated = (
+            self.session.query(Digest)
+            .filter(Digest.id.in_(list(digest_ids)))
+            .filter(Digest.sent_at.is_(None))
+            .update({Digest.sent_at: sent_at}, synchronize_session=False)
+        )
+        self.session.commit()
+        return int(updated or 0)
 
     def close(self) -> None:
         self.session.close()
